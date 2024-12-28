@@ -45,7 +45,7 @@ def parse_pdf_to_json(pdf_url):
     matchup_pattern = re.compile(r'.+@.+')  # Pattern to detect matchups (contains '@')
     player_name_pattern = re.compile(
         r'^[^,]+,[^ ]+')  # Lastname,Firstname pattern (has comma between last and first names)
-    time_pattern = re.compile(r'^\d{1,2}:\d{2}\(ET\)')  # Pattern to detect time entries
+    #time_pattern = re.compile(r'^\d{1,2}:\d{2}\(ET\)')  # Pattern to detect time entries
     date_time_pattern = re.compile(
         r'^\d{2}/\d{2}/\d{4}\s+\d{1,2}:\d{2}\(ET\)')  # Pattern to detect date and time (MM/DD/YYYY HH:MM(ET))
 
