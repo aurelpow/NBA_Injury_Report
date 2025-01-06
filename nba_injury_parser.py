@@ -4,6 +4,7 @@ import re
 from io import BytesIO
 import datetime
 import json
+from google_sheets_utils import connect_to_sheet
 
 
 def fetch_latest_pdf():
@@ -27,7 +28,6 @@ def fetch_latest_pdf():
     return last_valid_url
 
 
-# Main function to scrape NBA injury report
 def parse_pdf_to_json(pdf_url):
     response = requests.get(pdf_url)
     pdf_content = BytesIO(response.content)  # Use BytesIO to handle the content in memory
@@ -45,7 +45,7 @@ def parse_pdf_to_json(pdf_url):
     matchup_pattern = re.compile(r'.+@.+')  # Pattern to detect matchups (contains '@')
     player_name_pattern = re.compile(
         r'^[^,]+,[^ ]+')  # Lastname,Firstname pattern (has comma between last and first names)
-    #time_pattern = re.compile(r'^\d{1,2}:\d{2}\(ET\)')  # Pattern to detect time entries
+    time_pattern = re.compile(r'^\d{1,2}:\d{2}\(ET\)')  # Pattern to detect time entries
     date_time_pattern = re.compile(
         r'^\d{2}/\d{2}/\d{4}\s+\d{1,2}:\d{2}\(ET\)')  # Pattern to detect date and time (MM/DD/YYYY HH:MM(ET))
 
@@ -134,19 +134,38 @@ def parse_pdf_to_json(pdf_url):
     return json_output
 
 
-# Google Cloud Function entry point
-def main(request):
+def update_injury_report_sheet():
+    # Google Sheets setup
+    sheet_url = "https://docs.google.com/spreadsheets/d/1RMSZD8Xjy08364mJQeMw90jPvyZmhgLPjqJ_9auFPLY/"
+    worksheet_title = "injury_report"
+    worksheet = connect_to_sheet(sheet_url, worksheet_title)
+
+    # Fetch latest injury report
     pdf_url = fetch_latest_pdf()
     json_result = parse_pdf_to_json(pdf_url)
-    return json_result
 
-import logging
+    # Convert JSON result to list of lists
+    data = json.loads(json_result)
+    headers = ["Date", "Matchup", "Team", "Player Name", "Status", "Reason"]
+    rows = [[entry["Date"], entry["Matchup"], entry["Team"], entry["Player Name"], entry["Status"], entry["Reason"]] for
+            entry in data]
+
+    if not rows:
+        print("No data fetched from the injury report.")
+        return
+
+    # Clear existing data
+    worksheet.clear()
+    print("Cleared existing data in the sheet.")
+
+    # Add headers
+    worksheet.append_row(headers)
+    print("Headers added to the sheet.")
+
+    # Append new data
+    worksheet.append_rows(rows, value_input_option="RAW")
+    print(f"Added {len(rows)} new rows to the sheet.")
+
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    try:
-        pdf_url = fetch_latest_pdf()
-        logging.info(f"Fetched PDF URL: {pdf_url}")
-        json_output = parse_pdf_to_json(pdf_url)
-        logging.info(f"Parsed JSON Output: {json_output}")
-    except Exception as e:
-        logging.error(f"Error: {e}")
+    update_injury_report_sheet()
